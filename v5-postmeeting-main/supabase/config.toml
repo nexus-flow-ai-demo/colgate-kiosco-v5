@@ -1,0 +1,10 @@
+project_id = "mephvrrrzjzvvtauqlyh"
+
+[functions.gemini-chat]
+verify_jwt = false
+
+[functions.analyze-receipt]
+verify_jwt = false
+
+[functions.gemini-fast-router]
+verify_jwt = false
