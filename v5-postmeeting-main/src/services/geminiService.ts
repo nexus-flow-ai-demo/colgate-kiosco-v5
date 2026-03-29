@@ -1,6 +1,3 @@
-const GEMINI_API_KEY = 'AIzaSyCjGhe5CDPeH72AaNW1cjQbveLofkrNSlk';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
 const DEFAULT_PRODUCT_ID = "total_12";
 
 const normalizeValue = (value: unknown): string =>
@@ -29,30 +26,23 @@ export const analizarIntencionCliente = async (
   textoUsuario: string
 ): Promise<{ respuesta_completa: string }> => {
   try {
-    console.log("[Intent] Fetch directo a Gemini:", textoUsuario);
+    console.log("[Intent] Petición enviada al puente de Vercel:", textoUsuario);
 
-    const response = await fetch(GEMINI_URL, {
+    // En vez de ir a Google, vamos a nuestro propio servidor seguro
+    const response = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: "Eres el cerebro de recomendación del Kiosco Colgate. Analiza el texto del usuario y devuelve ÚNICAMENTE un JSON válido con dos claves: \"trigger_light\" y \"detected_need\".\n\nREGLAS DE CLASIFICACIÓN ESTRICTAS:\n\nSi el usuario menciona: café, té, vino, cigarrillo, manchas, dientes amarillos, o blanqueamiento estético ->\nDevuelve: {\"trigger_light\": \"v5_luminous_white_lovers\", \"detected_need\": \"manchas_cafe\"}\n\nSi el usuario menciona: salud bucal, encías, bacterias, sarro, caries, hijos, familia, dolor, o limpieza profunda ->\nDevuelve: {\"trigger_light\": \"v5_total_whitening\", \"detected_need\": \"proteccion_integral\"}\n\nSi el texto es ambiguo, por defecto recomienda protección integral. NO devuelvas texto fuera del JSON.\n\nIMPORTANTE: Devuelve el texto plano. NO envuelvas la respuesta en bloques de código markdown (```json). Solo devuelve las llaves del JSON." }]
-        },
-        contents: [{ parts: [{ text: textoUsuario }] }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 200
-        }
-      })
+      body: JSON.stringify({ textoUsuario })
     });
 
     const data = await response.json();
-    console.log("=== DATA CRUDA DE GOOGLE ===", JSON.stringify(data));
+    console.log("=== DATA CRUDA DEL PROXY ===", JSON.stringify(data));
 
-    // Extracción a prueba de fallos con optional chaining
+    // Mantenemos tu misma lógica de extracción a prueba de fallos
     let textoRespuesta = "";
     const candidate = data?.candidates?.[0];
     const parts = candidate?.content?.parts;
+    
     if (parts && parts.length > 0 && parts[0]?.text) {
       textoRespuesta = parts[0].text;
       // Limpiar cualquier posible markdown por seguridad
