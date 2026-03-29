@@ -264,17 +264,49 @@ const Index = () => {
     // 🚀 INTERCEPTOR DE LATENCIA CERO — Short-circuit antes de Gemini
     if (lower.includes('sensibilidad') || lower.includes('sensitive') || lower.includes('aliviar') || lower.includes('sensible')) {
       console.log("🚀 [Bypass Local] Keyword detectada. Saltando Gemini.");
+      
+      // Lógica de Bypass: Omitimos luces para sensibilidad por ahora (como estaba original), solo reproducimos video
       playActionVideo("v5_idle");
       setKioskState(2);
       return;
-    } else if (lower.includes('blanqueamiento') || lower.includes('luminous') || lower.includes('blanquear') || lower.includes('blanco')) {
-      console.log("🚀 [Bypass Local] Keyword detectada. Saltando Gemini.");
-      playActionVideo("v5_luminous_white_lovers");
+      
+    } else if (lower.includes('blanqueamiento') || lower.includes('luminous') || lower.includes('blanquear') || lower.includes('blanco') || lower.includes('café') || lower.includes('cafe') || lower.includes('manchas')) {
+      console.log("🚀 [Bypass Local] Keyword detectada: Luminous. Saltando Gemini.");
+      
+      const triggerValue = 'v5_luminous_white_lovers';
+      const detectedNeed = 'manchas_cafe';
+      
+      // 1. Enviar señal de luz local
+      localStorage.setItem('active_gondola_light', triggerValue);
+      localStorage.setItem('light_timestamp', Date.now().toString());
+      window.dispatchEvent(new Event('storage'));
+      
+      // 2. Reproducir video
+      playActionVideo(triggerValue);
+      
+      // 3. Registrar en Supabase (para que LiveStand y Dashboard en otros dispositivos se enteren)
+      recordInteraction('voice', triggerValue, detectedNeed);
+      
       setKioskState(2);
       return;
+      
     } else if (lower.includes('familia') || lower.includes('protección') || lower.includes('proteccion') || lower.includes('total')) {
-      console.log("🚀 [Bypass Local] Keyword detectada. Saltando Gemini.");
-      playActionVideo("v5_total_whitening");
+      console.log("🚀 [Bypass Local] Keyword detectada: Total 12. Saltando Gemini.");
+      
+      const triggerValue = 'v5_total_whitening';
+      const detectedNeed = 'proteccion_integral';
+      
+      // 1. Enviar señal de luz local
+      localStorage.setItem('active_gondola_light', triggerValue);
+      localStorage.setItem('light_timestamp', Date.now().toString());
+      window.dispatchEvent(new Event('storage'));
+      
+      // 2. Reproducir video
+      playActionVideo(triggerValue);
+      
+      // 3. Registrar en Supabase
+      recordInteraction('voice', triggerValue, detectedNeed);
+      
       setKioskState(2);
       return;
     }
