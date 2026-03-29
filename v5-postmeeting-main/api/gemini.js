@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.VITE_GEMINI_API_KEY || 'AIzaSyCjGhe5CDPeH72AaNW1cjQbveLofkrNSlk';
     
     // Cambiamos a 1.5-flash que es la versión de producción estable
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const { textoUsuario } = req.body;
 
