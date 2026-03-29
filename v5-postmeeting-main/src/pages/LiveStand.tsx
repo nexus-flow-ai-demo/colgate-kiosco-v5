@@ -1,20 +1,42 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const LiveStand = () => {
   const [activeLight, setActiveLight] = useState<string | null>(null);
 
   useEffect(() => {
+    // 1. Escucha Local (Para cuando pruebas en la misma PC)
     const handleStorageChange = () => {
       const activeLight = localStorage.getItem('active_gondola_light');
-      setActiveLight(activeLight); // Asegúrate de tener este estado definido
+      setActiveLight(activeLight);
     };
-    // Escuchar cambios desde otras pestañas
     window.addEventListener('storage', handleStorageChange);
-    // Revisión inicial por si ya había un valor
     handleStorageChange();
     
-    // Limpiar evento al desmontar
-    return () => window.removeEventListener('storage', handleStorageChange);
+    // 2. LA MAGIA: Escucha Remota (Para cuando viene de la Tableta/Supabase)
+    const channel = supabase
+      .channel("livestand-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "v5_client_interactions" },
+        (payload) => {
+          console.log("🌟 [LiveStand] ¡Señal recibida desde Supabase!", payload.new);
+          const newRecord = payload.new as any;
+          
+          if (newRecord.product_recommended) {
+            setActiveLight(newRecord.product_recommended);
+            // Sincronizamos la memoria local por si acaso
+            localStorage.setItem('active_gondola_light', newRecord.product_recommended);
+          }
+        }
+      )
+      .subscribe();
+
+    // Limpiar evento y canal al desmontar la pantalla
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleLightsOff = () => {
