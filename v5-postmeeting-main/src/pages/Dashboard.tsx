@@ -96,7 +96,32 @@ const Dashboard = () => {
     };
   };
 
+  // Calcular bloques de horas (24h)
+  const calculateTimeBlocks = () => {
+    const blocks: Record<string, number> = {};
+    
+    filteredData.forEach(item => {
+      const date = new Date(item.created_at);
+      const hour = date.getHours(); // 0 a 23
+      const nextHour = (hour + 1) % 24;
+      
+      const label = `${hour.toString().padStart(2, '0')}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
+      
+      blocks[label] = (blocks[label] || 0) + 1;
+    });
+
+    // Ordenar cronológicamente y generar colores
+    const colors = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#14b8a6', '#3b82f6', '#8b5cf6', '#d946ef'];
+    
+    return Object.keys(blocks).sort().map((label, index) => ({
+      label,
+      value: blocks[label],
+      color: colors[index % colors.length]
+    }));
+  };
+
   const metrics = calculateMetrics();
+  const timeBlocksData = calculateTimeBlocks();
 
   const handlePrint = () => {
     window.print();
@@ -143,7 +168,7 @@ const Dashboard = () => {
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              background: `conic-gradient(${gradientStops})`,
+              background: data.length > 0 ? `conic-gradient(${gradientStops})` : '#e5e7eb',
             }}
           >
             {/* Hueco central (Donut Chart) */}
@@ -161,17 +186,18 @@ const Dashboard = () => {
           </div>
           
           {/* Leyenda */}
-          <div className="mt-4 space-y-2 w-full">
+          <div className="mt-4 space-y-2 w-full max-h-40 overflow-y-auto pr-2">
+            {data.length === 0 && <div className="text-center text-sm text-gray-500">Sin datos</div>}
             {data.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
+              <div key={index} className="flex items-center justify-between text-xs">
                 <div className="flex items-center space-x-2">
                   <div 
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="text-gray-700">{item.label}</span>
                 </div>
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 ml-2">
                   {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                 </span>
               </div>
@@ -315,14 +341,14 @@ const Dashboard = () => {
             </div>
 
             {/* Gráficas - Fila 2 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <PieChart 
                 title="Intención de Compra"
                 data={[
                   { label: 'Luminous White', value: filteredData.filter(item => item.product_recommended === 'v5_luminous_white_lovers').length, color: '#9333ea' },
                   { label: 'Total Whitening', value: filteredData.filter(item => item.product_recommended === 'v5_total_whitening').length, color: '#2563eb' }
                 ]}
-                size={180}
+                size={160}
               />
               <PieChart 
                 title="Necesidades Detectadas"
@@ -330,7 +356,7 @@ const Dashboard = () => {
                   { label: 'Manchas de Café', value: filteredData.filter(item => item.identified_need === 'manchas_cafe').length, color: '#ea580c' },
                   { label: 'Protección Total', value: filteredData.filter(item => item.identified_need === 'proteccion_integral').length, color: '#16a34a' }
                 ]}
-                size={180}
+                size={160}
               />
               <PieChart 
                 title="Modalidad de Interacción"
@@ -338,7 +364,13 @@ const Dashboard = () => {
                   { label: 'Voz', value: filteredData.filter(item => item.interaction_type === 'voice').length, color: '#4f46e5' },
                   { label: 'Táctil', value: filteredData.filter(item => item.interaction_type === 'touch').length, color: '#22c55e' }
                 ]}
-                size={180}
+                size={160}
+              />
+              {/* Nueva Gráfica: Tráfico por Horas */}
+              <PieChart 
+                title="Tráfico por Horas (24h)"
+                data={timeBlocksData}
+                size={160}
               />
             </div>
           </div>
@@ -410,13 +442,13 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* TABLA DE DATOS */}
+            {/* TABLA DE DATOS MODIFICADA (FECHA Y HORA) */}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
+                      Fecha y Hora
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Kiosco
@@ -433,41 +465,51 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredData.map((interaction) => (
-                    <tr key={interaction.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(interaction.created_at).toLocaleDateString('es-VE', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {interaction.kiosk_code}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          interaction.interaction_type === 'voice' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {interaction.interaction_type === 'voice' ? '🎤 Voz' : '👆 Táctil'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {interaction.identified_need === 'manchas_cafe' ? '☕ Manchas de Café' :
-                         interaction.identified_need === 'proteccion_integral' ? '🛡️ Protección Integral' :
-                         interaction.identified_need === 'blanqueamiento_general' ? '✨ Blanqueamiento General' :
-                         interaction.identified_need === 'bacterias' ? '🦠 Bacterias' :
-                         interaction.identified_need}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {interaction.product_recommended === 'v5_total_whitening' 
-                          ? 'Total Whitening' 
-                          : 'Luminous White Lovers'}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredData.map((interaction) => {
+                    const dateObj = new Date(interaction.created_at);
+                    const formattedDate = dateObj.toLocaleDateString('es-VE', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    });
+                    const formattedTime = dateObj.toLocaleTimeString('es-VE', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+
+                    return (
+                      <tr key={interaction.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formattedDate} <span className="text-gray-500 ml-1">{formattedTime}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {interaction.kiosk_code}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            interaction.interaction_type === 'voice' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {interaction.interaction_type === 'voice' ? '🎤 Voz' : '👆 Táctil'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {interaction.identified_need === 'manchas_cafe' ? '☕ Manchas de Café' :
+                           interaction.identified_need === 'proteccion_integral' ? '🛡️ Protección Integral' :
+                           interaction.identified_need === 'blanqueamiento_general' ? '✨ Blanqueamiento General' :
+                           interaction.identified_need === 'bacterias' ? '🦠 Bacterias' :
+                           interaction.identified_need}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {interaction.product_recommended === 'v5_total_whitening' 
+                            ? 'Total Whitening' 
+                            : 'Luminous White Lovers'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               
