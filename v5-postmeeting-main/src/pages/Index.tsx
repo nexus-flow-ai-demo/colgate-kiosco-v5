@@ -368,14 +368,23 @@ const Index = () => {
   };
 
   // --- Tap to Start ---
-  const handleStart = () => {
-    // Entrar en pantalla completa total
+  const handleStart = async () => {
+    // Entrar en pantalla completa total (Modo Kiosco Agresivo)
     const elem = document.documentElement as any;
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen().catch(() => {});
-    } else if (elem.webkitRequestFullscreen) {
-      elem.webkitRequestFullscreen();
+    try {
+      if (elem.requestFullscreen) {
+        await elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) { // Safari y Chrome móvil
+        await elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { // Edge/IE
+        await elem.msRequestFullscreen();
+      } else if (elem.mozRequestFullScreen) { // Firefox
+        await elem.mozRequestFullScreen();
+      }
+    } catch (err) {
+      console.warn("El navegador bloqueó la pantalla completa automática:", err);
     }
+
     setStarted(true);
     setKioskState(1);
     playActionVideo("video_hook");
@@ -575,96 +584,6 @@ const Index = () => {
         ))}
       </div>
     )}
-
-    {/* ===== TAP TO START OVERLAY ===== */}
-    {!started && (
-      <div
-        onClick={handleStart}
-        className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer"
-      >
-        <div className="flex flex-col items-center gap-6 animate-pulse">
-          <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-10 h-10 text-white"
-              style={{
-                position: 'absolute',
-                bottom: '8%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 150,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '20px',
-                width: '400px',
-              }}
-            >
-            </svg>
-          </div>
-          <p className="text-white text-2xl md:text-3xl font-bold tracking-tight">
-            Toca la pantalla para hablar con Valentina
-          </p>
-          <p className="text-white/50 text-sm">Avatar IA · Colgate</p>
-        </div>
-      </div>
-      )}
-
-      {/* ===== TOUCH MODE BUTTONS PANEL ===== */}
-      {/* ===== TOUCH MODE: FASE 1 — Recomendación (kioskState 1) ===== */}
-      {isTouchMode && started && !actionPlaying && kioskState === 1 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '8%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 150,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '20px',
-            width: '400px',
-          }}
-        >
-          {[
-            { label: '☕ Amantes del Café', key: 'v5_luminous_white_lovers', state: 2 },
-            { label: '🦷 Blancura y Protección Total', key: 'v5_total_whitening', state: 2 },
-          ].map((btn) => (
-            <button
-              key={btn.key}
-              onClick={() => handleTouchButton(btn.key, btn.state)}
-              style={{
-                padding: '22px 32px',
-                borderRadius: '20px',
-                border: '2px solid rgba(255,255,255,0.3)',
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.08))',
-                backdropFilter: 'blur(25px)',
-                color: '#fff',
-                fontSize: '20px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.1)',
-                transition: 'all 200ms ease',
-                width: '100%',
-                textAlign: 'center',
-                letterSpacing: '0.5px',
-                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-              }}
-              onPointerDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-              onPointerUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >
-              {btn.label}
-            </button>
-          ))}
-        </div>
-      )}
 
 
       {/* ===== TAP TO START OVERLAY ===== */}
