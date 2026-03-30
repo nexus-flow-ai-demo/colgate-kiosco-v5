@@ -3,7 +3,6 @@ import { analizarIntencionCliente } from "@/services/geminiService";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types-simple";
 
-
 const STORAGE_BASE =
   "https://mephvrrrzjzvvtauqlyh.supabase.co/storage/v1/object/public/videos_avatar/";
 
@@ -52,6 +51,20 @@ const Index = () => {
   useEffect(() => { kioskStateRef.current = kioskState; }, [kioskState]);
   useEffect(() => { actionPlayingRef.current = actionPlaying; }, [actionPlaying]);
   useEffect(() => { isTouchModeRef.current = isTouchMode; }, [isTouchMode]);
+
+  // --- Táctica 1: Precarga Extrema (Pre-fetch en RAM) ---
+  useEffect(() => {
+    const preloadVideo = (url: string) => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'video';
+      link.href = url.startsWith("http") ? url : `${STORAGE_BASE}${url}`;
+      document.head.appendChild(link);
+    };
+
+    // Precargar todos los videos definidos
+    Object.values(VIDEO_MAP).forEach(videoUrl => preloadVideo(videoUrl));
+  }, []);
 
   // --- Play action video overlay ---
   const playActionVideo = useCallback((key: string) => {
@@ -488,6 +501,9 @@ const Index = () => {
           objectFit: 'contain',
           backgroundColor: 'transparent',
           zIndex: 0,
+          /* Táctica 2: Aceleración GPU */
+          transform: 'translateZ(0)',
+          willChange: 'transform, opacity',
         }}
       />
 
@@ -510,6 +526,9 @@ const Index = () => {
           zIndex: 10,
           pointerEvents: actionPlaying ? 'auto' : 'none',
           transition: 'opacity 200ms ease',
+          /* Táctica 2: Aceleración GPU */
+          transform: 'translateZ(0)',
+          willChange: 'transform, opacity',
         }}
       />
 
