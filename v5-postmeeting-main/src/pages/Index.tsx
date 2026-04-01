@@ -33,6 +33,11 @@ const MicIndicator = ({ status }: { status: MicStatus }) => {
 };
 
 const Index = () => {
+  // --- ESTADOS DE CARGA (NUEVO) ---
+  const [isAppReady, setIsAppReady] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [videoBlobs, setVideoBlobs] = useState<Record<string, string>>({});
+
   const [started, setStarted] = useState(false);
   const [kioskState, setKioskState] = useState(0);
   const [actionPlaying, setActionPlaying] = useState(false);
@@ -52,27 +57,47 @@ const Index = () => {
   useEffect(() => { actionPlayingRef.current = actionPlaying; }, [actionPlaying]);
   useEffect(() => { isTouchModeRef.current = isTouchMode; }, [isTouchMode]);
 
-  // --- Táctica 1: Precarga Extrema (Pre-fetch en RAM) ---
+  // --- 🚀 SISTEMA DE PRECARGA EN RAM (OPCIÓN NUCLEAR) ---
   useEffect(() => {
-    const preloadVideo = (url: string) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'video';
-      link.href = url.startsWith("http") ? url : `${STORAGE_BASE}${url}`;
-      document.head.appendChild(link);
+    const loadAllVideosIntoRAM = async () => {
+      const keys = Object.keys(VIDEO_MAP);
+      const downloadedBlobs: Record<string, string> = {};
+      let loadedCount = 0;
+
+      for (const key of keys) {
+        try {
+          const url = VIDEO_MAP[key].startsWith("http") ? VIDEO_MAP[key] : `${STORAGE_BASE}${VIDEO_MAP[key]}`;
+          // Forzamos la descarga completa del archivo
+          const response = await fetch(url);
+          const blob = await response.blob();
+          // Lo convertimos en una URL local de la RAM del dispositivo
+          downloadedBlobs[key] = URL.createObjectURL(blob);
+          console.log(`✅ Video cargado en RAM: ${key}`);
+        } catch (error) {
+          console.error(`❌ Error cargando video ${key}:`, error);
+          // Fallback de emergencia a la URL normal si falla la descarga
+          downloadedBlobs[key] = VIDEO_MAP[key].startsWith("http") ? VIDEO_MAP[key] : `${STORAGE_BASE}${VIDEO_MAP[key]}`;
+        }
+        loadedCount++;
+        setLoadingProgress(Math.round((loadedCount / keys.length) * 100));
+      }
+
+      setVideoBlobs(downloadedBlobs);
+      setTimeout(() => setIsAppReady(true), 500); // Pequeña pausa para fluidez visual
     };
 
-    // Precargar todos los videos definidos
-    Object.values(VIDEO_MAP).forEach(videoUrl => preloadVideo(videoUrl));
+    loadAllVideosIntoRAM();
   }, []);
 
-  // --- Play action video overlay ---
+  // --- Lógica de reproducción modificada para usar la RAM ---
   const playActionVideo = useCallback((key: string) => {
-    const videoSource = VIDEO_MAP[key];
+    // AHORA USA EL BLOB (MEMORIA LOCAL) EN VEZ DE LA URL DE INTERNET
+    const videoSource = videoBlobs[key]; 
     if (!videoSource || !actionVideoRef.current) return;
-    console.log('[Kiosk] Playing action video:', key);
+    
+    console.log('[Kiosk] Reproduciendo desde RAM:', key);
     const vid = actionVideoRef.current;
-    vid.src = videoSource.startsWith("http") ? videoSource : `${STORAGE_BASE}${videoSource}`;
+    vid.src = videoSource;
     vid.currentTime = 0;
     setActionPlaying(true);
     actionPlayingRef.current = true;
@@ -80,8 +105,9 @@ const Index = () => {
     shouldListenRef.current = false;
     setMicStatus("speaking");
     stopListening();
+    
     vid.play().catch((err) => {
-      console.log('[Kiosk] Video play failed:', err);
+      console.log('[Kiosk] Error de reproducción:', err);
       // If this is the easter egg, do NOT reset to idle — retry once
       if (key === 'easter_egg') {
         console.log('[Kiosk] Easter egg play blocked, retrying...');
@@ -94,7 +120,7 @@ const Index = () => {
       setMicStatus("listening");
       startListening();
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [videoBlobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Dedicated restart function (try-catch for DOMException) ---
   const restartMicrophone = useCallback(() => {
@@ -470,8 +496,26 @@ const Index = () => {
     }
   };
 
-  // State 4 (Easter Egg) now just plays the video in the action layer — no hardcoded UI
+  // --- PANTALLA DE CARGA ---
+  if (!isAppReady) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black px-4">
+        <div className="w-24 h-24 mb-8">
+          <svg className="animate-spin text-red-600 w-full h-full" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2 tracking-wide">Iniciando Valentina...</h1>
+        <p className="text-gray-400 mb-6 text-lg">Optimizando experiencia ({loadingProgress}%)</p>
+        <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-full bg-red-600 transition-all duration-300 ease-out" style={{ width: `${loadingProgress}%` }} />
+        </div>
+      </div>
+    );
+  }
 
+  // --- RENDERIZADO PRINCIPAL ---
   return (
     <div
       style={{
@@ -487,7 +531,7 @@ const Index = () => {
     >
       {/* ===== BASE LAYER: Looping idle video ===== */}
       <video
-        src={`${STORAGE_BASE}v5_idle.mp4`}
+        src={videoBlobs["v5_idle"]}
         autoPlay
         loop
         muted
@@ -636,7 +680,7 @@ const Index = () => {
         </div>
       )}
 
-      {/* ===== Bóveda de Pre-carga Invisible ===== */}
+      {/* ===== Bóveda de Pre-carga Invisible (Ya no se usa activamente pero se deja por fallback) ===== */}
       <div style={{ display: 'none' }}>
         <video src={`${STORAGE_BASE}v5_idle.mp4`} preload="auto" />
         <video src={`${STORAGE_BASE}v5_video_hook.mp4`} preload="auto" />
