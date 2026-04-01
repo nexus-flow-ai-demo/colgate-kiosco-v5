@@ -125,34 +125,35 @@ const Index = () => {
     console.log('[Kiosk] Action video ended, kioskState:', kioskStateRef.current);
     setActionVideoReady(false);
 
-    // Fade out first, then clean up after transition
-    setTimeout(() => {
-      setActionPlaying(false);
-      actionPlayingRef.current = false;
+    // Fade out first, then clean up after transition
+    setTimeout(() => {
+      setActionPlaying(false);
+      actionPlayingRef.current = false;
 
     // If easter egg just finished → full reset to start screen
     if (kioskStateRef.current === 4) {
       console.log('[Kiosk] Easter egg ended, resetting to start');
-      shouldListenRef.current = false;
-      stopListening();
-      setKioskState(0);
-      setMicStatus("off");
-      setActionPlaying(false);
-      setStarted(false);
-      if (actionVideoRef.current) {
-        actionVideoRef.current.pause();
-        actionVideoRef.current.removeAttribute("src");
-      }
-        return;
-      }
+        shouldListenRef.current = false;
+        stopListening();
+        setKioskState(0);
+        setMicStatus("off");
+        setActionPlaying(false);
+        setStarted(false);
+        setIsTouchMode(false); // Ensure next client starts in voice mode by default
+        if (actionVideoRef.current) {
+          actionVideoRef.current.pause();
+          actionVideoRef.current.removeAttribute("src");
+        }
+        return;
+      }
 
-      // Normal flow: resume listening
-      shouldListenRef.current = true;
-      setTimeout(() => {
-        restartMicrophone();
-      }, 300);
-    }, 200); // 200ms fade-out delay
-  }, [restartMicrophone]);
+      // Normal flow: resume listening
+      shouldListenRef.current = true;
+      setTimeout(() => {
+        restartMicrophone();
+      }, 300);
+    }, 200); // 200ms fade-out delay
+  }, [restartMicrophone]);
 
   // --- Continuous Speech Recognition with auto-restart ---
   const startListening = useCallback(() => {
