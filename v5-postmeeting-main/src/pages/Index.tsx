@@ -130,16 +130,18 @@ const Index = () => {
       setActionPlaying(false);
       actionPlayingRef.current = false;
 
-    // If easter egg just finished → full reset to start screen
-    if (kioskStateRef.current === 4) {
-      console.log('[Kiosk] Easter egg ended, resetting to start');
+      // If recommendation video just finished → full reset to start screen
+      if (kioskStateRef.current === 2) {
+        console.log(
+          "[Kiosk] Recommendation video ended, resetting to start"
+        );
         shouldListenRef.current = false;
         stopListening();
         setKioskState(0);
         setMicStatus("off");
         setActionPlaying(false);
         setStarted(false);
-        setIsTouchMode(false); // Ensure next client starts in voice mode by default
+        setIsTouchMode(false); // Reset to voice mode
         if (actionVideoRef.current) {
           actionVideoRef.current.pause();
           actionVideoRef.current.removeAttribute("src");
